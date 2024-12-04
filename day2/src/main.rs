@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::env;
 use std::fs;
 
@@ -10,20 +11,16 @@ fn main() {
     }
     let filename = args.get(1).unwrap();
     let contents = fs::read_to_string(filename).unwrap();
-    let mut data: Vec<Vec<i32>> = Vec::new();
-    let size = contents.lines().count();
-    data.reserve(size);
+    let mut data: Vec<Vec<i32>> = Vec::with_capacity(contents.lines().count());
     for line in contents.lines() {
         let parts = line.split_whitespace();
-        let mut numbers: Vec<i32> = Vec::new();
-        numbers.reserve(parts.clone().count());
+        let mut numbers: Vec<i32> = Vec::with_capacity(parts.clone().count());
         for part in parts {
             numbers.push(part.parse().unwrap());
         }
         data.push(numbers);
     }
-    let mut safe_indices: Vec<bool> = Vec::new();
-    safe_indices.reserve(size);
+    let mut safe_indices: Vec<bool> = Vec::with_capacity(contents.lines().count());
     for line in &data {
         let mut num_probs = 0;
         let mut safe = true;
@@ -32,16 +29,14 @@ fn main() {
         let mut gt = false;
         let mut curr = iter.next();
         let mut next = iter.next();
-        while next.is_none() == false {
+        while next.is_some() {
             let diff = curr.unwrap() - next.unwrap();
-            if diff < 0 {
-                lt = true;
-            } else if diff > 0 {
-                gt = true;
+            match diff.cmp(&0) {
+                Ordering::Greater => gt = true,
+                Ordering::Less => lt = true,
+                Ordering::Equal => ()
             }
-            if diff.abs() == 0 || diff.abs() > 3 {
-                num_probs += 1;
-            } else if gt == true && lt == true {
+            if diff.abs() == 0 || diff.abs() > 3 || gt && lt {
                 num_probs += 1;
             }
             curr = next;
@@ -52,9 +47,8 @@ fn main() {
         }
         safe_indices.push(safe);
     }
-    println!("Number of safe reports: {}", safe_indices.iter().filter(|&x| *x == true).count());
-    let mut safe_indices: Vec<bool> = Vec::new();
-    safe_indices.reserve(size);
+    println!("Number of safe reports: {}", safe_indices.iter().filter(|&x| *x ).count());
+    let mut safe_indices: Vec<bool> = Vec::with_capacity(contents.lines().count());
     for line in &data {
         let mut global_safe = false;
         for leave_out_idx in 0..(*line).len() {
@@ -66,29 +60,26 @@ fn main() {
             let mut curr = iter.next();
             let mut next = iter.next();
             let mut safe = true;
-            while next.is_none() == false {
+            while next.is_some() {
                 let diff = curr.unwrap() - next.unwrap();
                 curr = next;
                 next = iter.next();
-                if diff < 0 {
-                    lt = true;
-                } else if diff > 0 {
-                    gt = true;
+                match diff.cmp(&0) {
+                    Ordering::Greater => gt = true,
+                    Ordering::Less => lt = true,
+                    Ordering::Equal => ()
                 }
-                if diff.abs() == 0 || diff.abs() > 3 {
-                    safe = false;
-                    next = None;
-                } else if gt == true && lt == true {
+                if diff.abs() == 0 || diff.abs() > 3 || gt && lt {
                     safe = false;
                     next = None;
                 }
             }
-            if safe == true {
+            if safe {
                 global_safe = true;
                 break;
             }
         }
         safe_indices.push(global_safe);
     }
-    println!("Number of safe reports: {}", safe_indices.iter().filter(|&x| *x == true).count());
+    println!("Number of safe reports: {}", safe_indices.iter().filter(|&x| *x ).count());
 }
